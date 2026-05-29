@@ -104,6 +104,17 @@ function HeroVideo() {
     }
   };
 
+  const setHeroPlaybackSpeed = () => {
+    const video = videoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    video.defaultPlaybackRate = 1.5;
+    video.playbackRate = 1.5;
+  };
+
   const handleTimeUpdate = () => {
     const video = videoRef.current;
 
@@ -125,10 +136,13 @@ function HeroVideo() {
         muted
         playsInline
         preload="auto"
+        onLoadedMetadata={setHeroPlaybackSpeed}
         onLoadedData={() => {
           hasFrozenRef.current = false;
           setHasVideoError(false);
+          setHeroPlaybackSpeed();
         }}
+        onPlay={setHeroPlaybackSpeed}
         onTimeUpdate={handleTimeUpdate}
         onEnded={freezeOnFinalFrame}
         onError={() => setHasVideoError(true)}
