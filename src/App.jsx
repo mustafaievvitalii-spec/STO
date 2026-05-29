@@ -55,7 +55,7 @@ const faqs = [
   {
     question: 'Do the hero videos need to be uploaded now?',
     answer:
-      'No. The page is prepared for /videos/hero-desktop.mp4 and /videos/hero-mobile.mp4 and shows a dark fallback until they are added.',
+      'No. The page is prepared for /videos/hero-car.mp4 and /videos/mobile-car.mp4 and shows a dark fallback until they are added.',
   },
 ];
 
@@ -82,11 +82,37 @@ function useRevealOnScroll() {
 
 function HeroVideo() {
   const videoRef = useRef(null);
+  const hasFrozenRef = useRef(false);
   const [hasVideoError, setHasVideoError] = useState(false);
 
-  const handleEnded = () => {
-    if (videoRef.current) {
-      videoRef.current.pause();
+  const freezeOnFinalFrame = () => {
+    const video = videoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    if (hasFrozenRef.current) {
+      return;
+    }
+
+    hasFrozenRef.current = true;
+    video.pause();
+
+    if (Number.isFinite(video.duration) && video.duration > 0) {
+      video.currentTime = Math.max(video.duration - 0.04, 0);
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    const video = videoRef.current;
+
+    if (!video || !Number.isFinite(video.duration) || video.duration <= 0) {
+      return;
+    }
+
+    if (video.duration - video.currentTime <= 0.06) {
+      freezeOnFinalFrame();
     }
   };
 
@@ -98,13 +124,18 @@ function HeroVideo() {
         autoPlay
         muted
         playsInline
-        preload="metadata"
-        onEnded={handleEnded}
+        preload="auto"
+        onLoadedData={() => {
+          hasFrozenRef.current = false;
+          setHasVideoError(false);
+        }}
+        onTimeUpdate={handleTimeUpdate}
+        onEnded={freezeOnFinalFrame}
         onError={() => setHasVideoError(true)}
         aria-hidden="true"
       >
-        <source src="/videos/hero-desktop.mp4" type="video/mp4" media="(min-width: 769px)" />
-        <source src="/videos/hero-mobile.mp4" type="video/mp4" media="(max-width: 768px)" />
+        <source src="/videos/hero-car.mp4" type="video/mp4" media="(min-width: 769px)" />
+        <source src="/videos/mobile-car.mp4" type="video/mp4" media="(max-width: 768px)" />
       </video>
     </div>
   );
