@@ -59,6 +59,17 @@ const faqs = [
   },
 ];
 
+
+const getHeroVideoSource = () => {
+  if (typeof window === 'undefined') {
+    return '/videos/hero-car.mp4';
+  }
+
+  return window.matchMedia('(max-width: 768px)').matches
+    ? '/videos/mobile-car.mp4'
+    : '/videos/hero-car.mp4';
+};
+
 function useRevealOnScroll() {
   useEffect(() => {
     const elements = document.querySelectorAll('[data-reveal]');
@@ -84,6 +95,46 @@ function HeroVideo() {
   const videoRef = useRef(null);
   const hasFrozenRef = useRef(false);
   const [hasVideoError, setHasVideoError] = useState(false);
+  const [videoSource, setVideoSource] = useState(getHeroVideoSource);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+
+    const updateVideoSource = () => {
+      setVideoSource(mediaQuery.matches ? '/videos/mobile-car.mp4' : '/videos/hero-car.mp4');
+    };
+
+    updateVideoSource();
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', updateVideoSource);
+    } else {
+      mediaQuery.addListener(updateVideoSource);
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', updateVideoSource);
+      } else {
+        mediaQuery.removeListener(updateVideoSource);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    hasFrozenRef.current = false;
+    video.muted = true;
+    video.playsInline = true;
+    setHasVideoError(false);
+    video.load();
+    playHeroVideo();
+  }, [videoSource]);
 
   const freezeOnFinalFrame = () => {
     const video = videoRef.current;
@@ -115,6 +166,22 @@ function HeroVideo() {
     video.playbackRate = 1.5;
   };
 
+  const playHeroVideo = () => {
+    const video = videoRef.current;
+
+    if (!video || hasFrozenRef.current) {
+      return;
+    }
+
+    const playPromise = video.play();
+
+    if (playPromise) {
+      playPromise.catch(() => {
+        // Мобільні браузери можуть відкласти автозапуск до завантаження достатньої кількості даних.
+      });
+    }
+  };
+
   const handleTimeUpdate = () => {
     const video = videoRef.current;
 
@@ -141,16 +208,15 @@ function HeroVideo() {
           hasFrozenRef.current = false;
           setHasVideoError(false);
           setHeroPlaybackSpeed();
+          playHeroVideo();
         }}
         onPlay={setHeroPlaybackSpeed}
         onTimeUpdate={handleTimeUpdate}
         onEnded={freezeOnFinalFrame}
         onError={() => setHasVideoError(true)}
         aria-hidden="true"
-      >
-        <source src="/videos/hero-car.mp4" type="video/mp4" media="(min-width: 769px)" />
-        <source src="/videos/mobile-car.mp4" type="video/mp4" media="(max-width: 768px)" />
-      </video>
+        src={videoSource}
+      />
     </div>
   );
 }
